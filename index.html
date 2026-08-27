@@ -898,7 +898,7 @@ const CLUES = [
   () => `SUB-INDUSTRY: ${ANSWER.sub}`,
   () => `MARKET CAP: ${ANSWER.capTier || 'Unknown'}`,
   () => `LAST CLOSE: ${lastClosePrice !== null ? '$' + lastClosePrice.toFixed(2) : 'Unavailable'}`,
-  () => `FOUNDED ${ANSWER.founded || 'UNKNOWN'} — COMPANY: ${ANSWER.name.split(' ')[0]}${ANSWER.name.split(' ').length > 1 ? '…' : ''}`,
+  () => `FOUNDED ${ANSWER.founded || 'UNKNOWN'} — HEADQUARTERED IN ${ANSWER.state}${ANSWER.dow ? ' · DOW 30 COMPONENT' : ''}`,
 ];
 
 function renderClues(guessCount){
