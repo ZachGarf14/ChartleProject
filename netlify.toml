@@ -1,0 +1,13 @@
+# Skips a Netlify deploy (and its credit cost) when a commit only touches
+# data/ — the daily GitHub Action commit is exactly that. The live site
+# reads data/*.json from jsDelivr's public CDN instead of Netlify's own
+# copy (see loadTickers()/loadDailyData() in index.html), so skipping the
+# rebuild for those commits doesn't leave the site serving stale data —
+# there's nothing Netlify-side that needs republishing.
+#
+# `git diff --quiet` exits 0 (no differences) when nothing OUTSIDE data/
+# changed, which Netlify's ignore command treats as "skip this build."
+# Any change outside data/ (index.html, this file, etc.) makes the diff
+# non-empty, exits 1, and the deploy proceeds normally.
+[build]
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ':!data'"
