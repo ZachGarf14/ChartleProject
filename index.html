@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chartle — Guess the Ticker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #f0ddd2;
+    --paper-dim: #e8d0c2;
+    --ink: #1c1510;
+    --ink-soft: #4a3f37;
+    --rule: #1c1510;
+    --gold: #a8792f;
+    --green: #2f5233;
+    --green-bg: #d7e2d2;
+    --amber: #a8642f;
+    --amber-bg: #ecd8bd;
+    --miss: #8c8378;
+    --miss-bg: #ddd3c8;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--paper);
+    background-image:
+      repeating-linear-gradient(0deg, rgba(28,21,16,0.025) 0px, rgba(28,21,16,0.025) 1px, transparent 1px, transparent 3px);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 28px 16px 60px;
+  }
+  .sheet{
+    width: 100%;
+    max-width: 620px;
+  }
+  .masthead{
+    text-align: center;
+    border-bottom: 3px solid var(--rule);
+    padding-bottom: 14px;
+    margin-bottom: 6px;
+    position: relative;
+  }
+  .masthead .eyebrow{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .masthead h1{
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 52px;
+    letter-spacing: -0.01em;
+    margin: 0;
+    line-height: 1;
+  }
+  .masthead .tagline{
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin-top: 6px;
+  }
+  .edition-seal{
+    position: absolute;
+    right: 0;
+    top: 4px;
+    border: 1.5px solid var(--ink);
+    border-radius: 50%;
+    width: 62px;
+    height: 62px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    line-height: 1.3;
+    letter-spacing: 0.03em;
+    transform: rotate(6deg);
+    opacity: 0.75;
+  }
+  .rule-thin{
+    border: none;
+    border-top: 1px solid var(--ink);
+    opacity: 0.35;
+    margin: 18px 0;
+  }
+  .clue-strip{
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 16px 0 22px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+  }
+  .clue{
+    border: 1px solid var(--ink);
+    padding: 5px 10px;
+    background: var(--paper-dim);
+    letter-spacing: 0.02em;
+  }
+  .clue.locked{
+    opacity: 0.32;
+    border-style: dashed;
+  }
+  .chart-frame{
+    border: 2px solid var(--ink);
+    background: #f7ece3;
+    padding: 18px 12px 8px;
+    position: relative;
+  }
+  .chart-label{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    display: flex;
+    justify-content: space-between;
+    padding: 0 6px 6px;
+    letter-spacing: 0.04em;
+  }
+  canvas{ width: 100%; height: 260px; display: block; }
+
+  .guess-row{
+    display: flex;
+    gap: 8px;
+    margin-top: 22px;
+    position: relative;
+  }
+  #ticker-input{
+    flex: 1;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    padding: 12px 14px;
+    border: 1.5px solid var(--ink);
+    background: var(--paper-dim);
+    color: var(--ink);
+    outline: none;
+  }
+  #ticker-input:focus{ background: #f7ece3; }
+  #guess-btn{
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 12px 18px;
+    background: var(--ink);
+    color: var(--paper);
+    border: 1.5px solid var(--ink);
+    cursor: pointer;
+  }
+  #guess-btn:hover{ background: var(--gold); border-color: var(--gold); }
+  #guess-btn:disabled{ opacity: 0.4; cursor: default; background: var(--ink); }
+
+  .autocomplete{
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 78px;
+    background: var(--paper);
+    border: 1.5px solid var(--ink);
+    border-top: none;
+    max-height: 180px;
+    overflow-y: auto;
+    z-index: 5;
+    display: none;
+  }
+  .autocomplete div{
+    padding: 8px 14px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(28,21,16,0.1);
+  }
+  .autocomplete div:hover, .autocomplete div.active{ background: var(--paper-dim); }
+  .autocomplete strong{ color: var(--gold); }
+
+  .ledger{
+    margin-top: 24px;
+  }
+  .ledger-title{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    border-bottom: 1px solid var(--ink);
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+  }
+  .guess-entry{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 4px;
+    border-bottom: 1px dotted rgba(28,21,16,0.25);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+  }
+  .g-num{ color: var(--ink-soft); width: 18px; }
+  .g-ticker{ font-weight: 600; width: 60px; }
+  .g-result{
+    padding: 2px 8px;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  .g-result.hit{ background: var(--green-bg); color: var(--green); }
+  .g-result.close{ background: var(--amber-bg); color: var(--amber); }
+  .g-result.miss{ background: var(--miss-bg); color: var(--miss); }
+
+  .end-panel{
+    margin-top: 20px;
+    border: 2px solid var(--ink);
+    padding: 18px;
+    text-align: center;
+    background: var(--paper-dim);
+    display: none;
+  }
+  .end-panel.show{ display: block; }
+  .end-panel .verdict{
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 24px;
+    margin-bottom: 4px;
+  }
+  .end-panel .detail{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-bottom: 12px;
+  }
+  .tape{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 20px;
+    letter-spacing: 4px;
+  }
+  .note{
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    margin-top: 28px;
+    line-height: 1.6;
+    opacity: 0.8;
+  }
+
+  .stats-btn{
+    position: absolute;
+    left: 0;
+    top: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: none;
+    border: 1px solid var(--ink);
+    padding: 6px 10px;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  .stats-btn:hover{ background: var(--paper-dim); }
+
+  .feedback-btn{
+    position: absolute;
+    left: 0;
+    top: 34px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: none;
+    border: 1px solid var(--ink);
+    padding: 6px 10px;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  .feedback-btn:hover{ background: var(--paper-dim); }
+
+  .fb-field{ margin-bottom: 12px; text-align: left; }
+  .fb-field label{
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
+  .fb-field input, .fb-field textarea{
+    width: 100%;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    padding: 8px 10px;
+    border: 1.5px solid var(--ink);
+    background: var(--paper-dim);
+    color: var(--ink);
+    outline: none;
+    resize: vertical;
+  }
+  .fb-field textarea{ min-height: 80px; }
+  .fb-field input:focus, .fb-field textarea:focus{ background: #f7ece3; }
+  #fb-submit{
+    width: 100%;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 10px;
+    background: var(--ink);
+    color: var(--paper);
+    border: 1.5px solid var(--ink);
+    cursor: pointer;
+  }
+  #fb-submit:hover{ background: var(--gold); border-color: var(--gold); }
+  #fb-submit:disabled{ opacity: 0.5; cursor: default; }
+  .fb-note{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-soft);
+    margin-top: 10px;
+    text-align: center;
+  }
+  .fb-thanks{
+    text-align: center;
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 18px;
+    padding: 12px 0;
+  }
+
+  .modal-overlay{
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(28,21,16,0.55);
+    z-index: 20;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 60px 16px;
+  }
+  .modal-overlay.show{ display: flex; }
+  .modal{
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    max-width: 420px;
+    width: 100%;
+    padding: 20px;
+  }
+  .modal-title{
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 22px;
+    margin: 0 0 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-close{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    background: none;
+    border: 1px solid var(--ink);
+    cursor: pointer;
+    padding: 4px 9px;
+  }
+  .stats-grid{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 16px 0 20px;
+    text-align: center;
+  }
+  .stats-grid .num{
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 26px;
+    line-height: 1;
+  }
+  .stats-grid .lbl{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-top: 4px;
+  }
+  .dist-title{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    border-bottom: 1px solid var(--ink);
+    padding-bottom: 5px;
+    margin-bottom: 8px;
+  }
+  .dist-row{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+  .dist-row .dist-label{ width: 14px; text-align: right; color: var(--ink-soft); }
+  .dist-row .dist-bar-wrap{ flex: 1; background: var(--paper-dim); height: 18px; }
+  .dist-row .dist-bar{ background: var(--gold); height: 100%; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: var(--paper); font-size: 10px; min-width: 18px; }
+  .dist-row.miss .dist-bar{ background: var(--miss); }
+
+  .already-played{
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-top: 10px;
+    letter-spacing: 0.03em;
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <div class="masthead">
+    <button class="stats-btn" id="stats-btn">Stats</button>
+    <button class="feedback-btn" id="feedback-btn">Feedback</button>
+    <div class="edition-seal" id="edition-seal">DAILY<br>EDITION</div>
+    <div class="eyebrow">One chart. One year. Six guesses.</div>
+    <h1>Chartle</h1>
+    <div class="tagline">Name the ticker behind the line.</div>
+  </div>
+
+  <div class="clue-strip" id="clue-strip"></div>
+
+  <div class="chart-frame">
+    <div class="chart-label">
+      <span id="chart-date-start">—</span>
+      <span>% CHANGE, TRAILING 12 MOS</span>
+      <span id="chart-date-end">—</span>
+    </div>
+    <canvas id="chart" width="1100" height="520"></canvas>
+  </div>
+
+  <div class="guess-row">
+    <input id="ticker-input" type="text" placeholder="Type an S&P 500 ticker or company…" autocomplete="off" />
+    <button id="guess-btn">Guess</button>
+    <div class="autocomplete" id="autocomplete"></div>
+  </div>
+
+  <div class="ledger" id="ledger" style="display:none;">
+    <div class="ledger-title">Guesses</div>
+    <div id="ledger-entries"></div>
+  </div>
+
+  <div class="end-panel" id="end-panel">
+    <div class="verdict" id="verdict"></div>
+    <div class="detail" id="verdict-detail"></div>
+    <div class="tape" id="tape"></div>
+    <div class="already-played" id="already-played" style="display:none;">You already played today's Chartle — come back tomorrow for a new chart.</div>
+  </div>
+
+  <!-- Netlify Forms detects this at deploy time because it's static markup
+       with data-netlify="true" — no backend, no exposed email. Submissions
+       land in the Netlify dashboard for this site. -->
+  <form name="chartle-feedback" method="POST" data-netlify="true" netlify-honeypot="bot-field" hidden>
+    <input type="text" name="name" />
+    <input type="email" name="email" />
+    <textarea name="message"></textarea>
+    <input type="hidden" name="form-name" value="chartle-feedback" />
+  </form>
+
+  <div class="modal-overlay" id="feedback-overlay">
+    <div class="modal">
+      <div class="modal-title">Feedback <button class="modal-close" id="feedback-close">Close</button></div>
+      <div id="feedback-body">
+        <form id="feedback-form">
+          <div class="fb-field">
+            <label for="fb-name">Name (optional)</label>
+            <input type="text" id="fb-name" name="name" />
+          </div>
+          <div class="fb-field">
+            <label for="fb-email">Email (optional — only if you want a reply)</label>
+            <input type="email" id="fb-email" name="email" />
+          </div>
+          <div class="fb-field">
+            <label for="fb-message">Bug report, idea, or feedback</label>
+            <textarea id="fb-message" name="message" required></textarea>
+          </div>
+          <p style="display:none;"><label>Don't fill this out: <input name="bot-field" /></label></p>
+          <button type="submit" id="fb-submit">Send</button>
+        </form>
+      </div>
+      <div class="fb-note">Goes straight to the site owner — nothing is posted publicly.</div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="stats-overlay">
+    <div class="modal">
+      <div class="modal-title">Statistics <button class="modal-close" id="stats-close">Close</button></div>
+      <div class="stats-grid">
+        <div><div class="num" id="stat-played">0</div><div class="lbl">Played</div></div>
+        <div><div class="num" id="stat-winpct">0</div><div class="lbl">Win %</div></div>
+        <div><div class="num" id="stat-streak">0</div><div class="lbl">Streak</div></div>
+        <div><div class="num" id="stat-maxstreak">0</div><div class="lbl">Max Streak</div></div>
+      </div>
+      <div class="dist-title">Guess Distribution</div>
+      <div id="dist-rows"></div>
+    </div>
+  </div>
+
+  <div class="note">
+    Ticker, sector, sub-industry, HQ, and founding-year data are real (S&amp;P 500 constituents, 503 names incl. all Dow 30).<br>
+    Chart price data is fetched from data/&lt;date&gt;.json, published daily by scripts/fetch_daily_chart.py via GitHub Actions.
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// Data loading: tickers.json (static reference data) + the
+// day's data/{date}.json (real trailing-12mo closes, written
+// by scripts/fetch_daily_chart.py via GitHub Actions).
+//
+// Date is UTC-based everywhere — client and server MUST agree
+// on "today" or the puzzle desyncs across timezones.
+// ============================================================
+
+const MASK = 0xFFFFFFFF;
+
+function hashSeed(str){
+  let h = (1779033703 ^ str.length) >>> 0;
+  for (let i = 0; i < str.length; i++){
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353) >>> 0;
+    h = (((h << 13) >>> 0) | (h >>> 19)) >>> 0;
+  }
+  return () => {
+    h = Math.imul(h ^ (h >>> 16), 2246822519) >>> 0;
+    h = Math.imul(h ^ (h >>> 13), 3266489917) >>> 0;
+    h = (h ^ (h >>> 16)) >>> 0;
+    return h / 4294967296;
+  };
+}
+
+function todayStrUTC(){
+  const d = new Date();
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// Synthetic fallback series generator — used only if the day's
+// real data file (data/{date}.json) hasn't been published yet,
+// e.g. testing locally before the Action has ever run.
+function generateSyntheticSeries(tickerSymbol, seed){
+  const r = hashSeed(tickerSymbol + "|" + seed);
+  const points = 252;
+  const drift = (r() - 0.42) * 0.0009;
+  const vol = 0.012 + r() * 0.014;
+  let val = 0;
+  const series = [0];
+  for (let i = 1; i < points; i++){
+    const shock = (r() - 0.5) * 2 * vol;
+    val += drift + shock;
+    series.push(val);
+  }
+  return series.map(v => v * 100);
+}
+
+let TICKERS = [];
+let ANSWER = null;
+let series = [];
+let seriesDates = [];
+let usingRealData = false;
+let lastClosePrice = null;
+let todayStr = '';
+
+// ============================================================
+// History storage — localStorage only, keyed by UTC date.
+// { "2026-08-26": { ticker: "AZO", won: true, guesses: ["AAPL","AZO"] }, ... }
+// No accounts, no server — history lives in this one browser.
+// ============================================================
+const HISTORY_KEY = 'chartle-history-v1';
+
+function loadHistory(){
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY)) || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveHistory(history){
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  } catch (e) {
+    // localStorage unavailable (private browsing, quota, etc.) — game
+    // still works, it just won't remember across reloads.
+  }
+}
+
+function persistResult(won){
+  const history = loadHistory();
+  history[todayStr] = {
+    ticker: ANSWER.t,
+    won,
+    guesses: guesses.map(g => g.t),
+  };
+  saveHistory(history);
+}
+
+function dateFromStr(s){
+  return new Date(s + 'T00:00:00Z');
+}
+
+function diffDays(a, b){
+  return Math.round((dateFromStr(a) - dateFromStr(b)) / 86400000);
+}
+
+function computeStats(history){
+  const dates = Object.keys(history).sort(); // ascending, ISO strings sort correctly
+  const played = dates.length;
+  const wins = dates.filter(d => history[d].won).length;
+  const winPct = played ? Math.round((wins / played) * 100) : 0;
+
+  // Distribution: counts of guess-count for wins (1..6), plus a miss bucket.
+  const dist = { 1:0, 2:0, 3:0, 4:0, 5:0, 6:0, miss:0 };
+  dates.forEach(d => {
+    const entry = history[d];
+    if (entry.won){
+      const n = entry.guesses.length;
+      if (dist[n] !== undefined) dist[n]++;
+    } else {
+      dist.miss++;
+    }
+  });
+
+  // Max streak: longest run of consecutive calendar days, each won.
+  let maxStreak = 0, run = 0, prevDate = null;
+  dates.forEach(d => {
+    const entry = history[d];
+    if (entry.won && prevDate !== null && diffDays(d, prevDate) === 1){
+      run += 1;
+    } else if (entry.won){
+      run = 1;
+    } else {
+      run = 0;
+    }
+    maxStreak = Math.max(maxStreak, run);
+    prevDate = d;
+  });
+
+  // Current streak: walk backward from the most recent played day.
+  let currentStreak = 0;
+  for (let i = dates.length - 1; i >= 0; i--){
+    const d = dates[i];
+    if (!history[d].won) break;
+    if (i < dates.length - 1 && diffDays(dates[i+1], d) !== 1) break;
+    currentStreak++;
+  }
+
+  return { played, winPct, currentStreak, maxStreak, dist };
+}
+
+function renderStats(){
+  const history = loadHistory();
+  const s = computeStats(history);
+  document.getElementById('stat-played').textContent = s.played;
+  document.getElementById('stat-winpct').textContent = s.winPct;
+  document.getElementById('stat-streak').textContent = s.currentStreak;
+  document.getElementById('stat-maxstreak').textContent = s.maxStreak;
+
+  const maxCount = Math.max(1, ...Object.values(s.dist));
+  const rows = document.getElementById('dist-rows');
+  rows.innerHTML = '';
+  [1,2,3,4,5,6,'miss'].forEach(key => {
+    const count = s.dist[key];
+    const pct = Math.round((count / maxCount) * 100);
+    const row = document.createElement('div');
+    row.className = 'dist-row' + (key === 'miss' ? ' miss' : '');
+    row.innerHTML = `<span class="dist-label">${key === 'miss' ? 'X' : key}</span>
+      <div class="dist-bar-wrap"><div class="dist-bar" style="width:${Math.max(pct,count?8:0)}%">${count || ''}</div></div>`;
+    rows.appendChild(row);
+  });
+}
+
+function wireStatsModal(){
+  const overlay = document.getElementById('stats-overlay');
+  document.getElementById('stats-btn').addEventListener('click', () => {
+    renderStats();
+    overlay.classList.add('show');
+  });
+  document.getElementById('stats-close').addEventListener('click', () => overlay.classList.remove('show'));
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('show'); });
+}
+
+function encodeFormData(data){
+  return Object.keys(data).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(data[k])).join('&');
+}
+
+function wireFeedbackModal(){
+  const overlay = document.getElementById('feedback-overlay');
+  document.getElementById('feedback-btn').addEventListener('click', () => overlay.classList.add('show'));
+  document.getElementById('feedback-close').addEventListener('click', () => overlay.classList.remove('show'));
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('show'); });
+
+  const form = document.getElementById('feedback-form');
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const submitBtn = document.getElementById('fb-submit');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending…';
+
+    const data = {
+      'form-name': 'chartle-feedback',
+      name: document.getElementById('fb-name').value,
+      email: document.getElementById('fb-email').value,
+      message: document.getElementById('fb-message').value,
+    };
+
+    fetch('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: encodeFormData(data),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Bad response: ' + res.status);
+        document.getElementById('feedback-body').innerHTML = '<div class="fb-thanks">Thanks — got it.</div>';
+      })
+      .catch(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send';
+        submitBtn.insertAdjacentHTML('afterend',
+          '<div class="fb-note" style="color:var(--amber)">Something went wrong sending that — try again in a moment.</div>');
+      });
+  });
+}
+
+async function loadTickers(){
+  const res = await fetch('data/tickers.json');
+  if (!res.ok) throw new Error('Failed to load tickers.json');
+  return res.json();
+}
+
+async function loadDailyData(dateStr){
+  try {
+    const res = await fetch(`data/${dateStr}.json`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+async function init(){
+  todayStr = todayStrUTC();
+  TICKERS = await loadTickers();
+
+  const rand = hashSeed(todayStr);
+  const answerIdx = Math.floor(rand() * TICKERS.length);
+  ANSWER = TICKERS[answerIdx];
+
+  const daily = await loadDailyData(todayStr);
+
+  if (daily && daily.ticker === ANSWER.t && Array.isArray(daily.changePct) && daily.changePct.length > 20){
+    series = daily.changePct;
+    seriesDates = daily.dates;
+    usingRealData = true;
+    lastClosePrice = (typeof daily.lastClose === 'number') ? daily.lastClose : null;
+  } else {
+    series = generateSyntheticSeries(ANSWER.t, todayStr);
+    seriesDates = null;
+    usingRealData = false;
+    // Synthetic placeholder price, seeded so it's at least stable across
+    // reloads of the same unpublished day — not a real quote.
+    const priceRand = hashSeed(ANSWER.t + "|price|" + todayStr);
+    lastClosePrice = 20 + priceRand() * 480;
+  }
+
+  drawChart();
+  renderDateLabels();
+  wireStatsModal();
+  wireFeedbackModal();
+
+  const history = loadHistory();
+  const todayEntry = history[todayStr];
+
+  if (todayEntry){
+    // Already played today — rebuild the board read-only instead of
+    // letting them replay. Bad ticker symbols (e.g. stale universe
+    // after a data refresh) are just skipped rather than crashing.
+    guesses = todayEntry.guesses.map(t => TICKERS.find(x => x.t === t)).filter(Boolean);
+    const ledger = document.getElementById('ledger');
+    const ledgerEntries = document.getElementById('ledger-entries');
+    if (guesses.length){
+      ledger.style.display = 'block';
+      guesses.forEach((g, i) => addLedgerRow(g, i + 1, ledgerEntries));
+    }
+    renderClues(guesses.length);
+    finalizeUI(todayEntry.won);
+    document.getElementById('already-played').style.display = 'block';
+  } else {
+    renderClues(0);
+    wireGuessFlow();
+  }
+
+  if (!usingRealData){
+    const note = document.querySelector('.note');
+    if (note){
+      note.innerHTML = 'DATA NOTE — real trailing-12-month closes for today\'s ticker aren\'t published yet ' +
+        '(data/' + todayStr + '.json not found), so this chart is a seeded synthetic placeholder.<br>' +
+        'Once scripts/fetch_daily_chart.py has run via the GitHub Action, this banner disappears automatically.';
+    }
+  }
+}
+
+// ---------- Chart rendering ----------
+function drawChart(){
+  const canvas = document.getElementById('chart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  const min = Math.min(...series), max = Math.max(...series);
+  const pad = 30;
+  const xStep = (W - pad*2) / (series.length - 1);
+  const yScale = (H - pad*2) / (max - min || 1);
+
+  const zeroY = H - pad - (0 - min) * yScale;
+  ctx.strokeStyle = "rgba(28,21,16,0.25)";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4,4]);
+  ctx.beginPath();
+  ctx.moveTo(pad, zeroY);
+  ctx.lineTo(W - pad, zeroY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.beginPath();
+  series.forEach((v, i) => {
+    const x = pad + i * xStep;
+    const y = H - pad - (v - min) * yScale;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = "#1c1510";
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = "round";
+  ctx.stroke();
+
+  const lastX = pad + (series.length-1) * xStep;
+  const lastY = H - pad - (series[series.length-1] - min) * yScale;
+  ctx.fillStyle = "#a8792f";
+  ctx.beginPath();
+  ctx.arc(lastX, lastY, 5, 0, Math.PI*2);
+  ctx.fill();
+}
+
+function renderDateLabels(){
+  const endDate = new Date();
+  const startDate = new Date(); startDate.setUTCFullYear(startDate.getUTCFullYear() - 1);
+  const fmt = d => d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric', timeZone: 'UTC'});
+
+  if (seriesDates && seriesDates.length){
+    document.getElementById('chart-date-start').textContent = fmt(new Date(seriesDates[0] + 'T00:00:00Z'));
+    document.getElementById('chart-date-end').textContent = fmt(new Date(seriesDates[seriesDates.length-1] + 'T00:00:00Z'));
+  } else {
+    document.getElementById('chart-date-start').textContent = fmt(startDate);
+    document.getElementById('chart-date-end').textContent = fmt(endDate);
+  }
+  document.getElementById('edition-seal').innerHTML =
+    `${endDate.toLocaleDateString('en-US',{month:'short', timeZone:'UTC'}).toUpperCase()}<br>${endDate.getUTCDate()}, ${endDate.getUTCFullYear()}`;
+}
+
+// ---------- Clue progression ----------
+const CLUES = [
+  () => null,
+  () => `SECTOR: ${ANSWER.sector}`,
+  () => `SUB-INDUSTRY: ${ANSWER.sub}`,
+  () => `MARKET CAP: ${ANSWER.capTier || 'Unknown'}`,
+  () => `LAST CLOSE: ${lastClosePrice !== null ? '$' + lastClosePrice.toFixed(2) : 'Unavailable'}`,
+  () => `FOUNDED ${ANSWER.founded || 'UNKNOWN'} — COMPANY: ${ANSWER.name.split(' ')[0]}${ANSWER.name.split(' ').length > 1 ? '…' : ''}`,
+];
+
+function renderClues(guessCount){
+  const strip = document.getElementById('clue-strip');
+  strip.innerHTML = '';
+  for (let i = 1; i < CLUES.length; i++){
+    const unlocked = i <= guessCount;
+    const div = document.createElement('div');
+    div.className = 'clue' + (unlocked ? '' : ' locked');
+    div.textContent = unlocked ? CLUES[i]() : `CLUE ${i} — LOCKED`;
+    strip.appendChild(div);
+  }
+}
+
+// ---------- Guess flow ----------
+let guesses = [];
+const MAX_GUESSES = 6;
+let gameOver = false;
+
+function matchTickers(query){
+  const q = query.trim().toUpperCase();
+  if (!q) return [];
+  return TICKERS.filter(x =>
+    x.t.startsWith(q) || x.name.toUpperCase().includes(q)
+  ).slice(0, 6);
+}
+
+function resolveGuess(raw){
+  const q = raw.trim().toUpperCase();
+  return TICKERS.find(x => x.t === q || x.name.toUpperCase() === q) || null;
+}
+
+function classifyGuess(match){
+  if (match.t === ANSWER.t) return 'hit';
+  if (match.sector === ANSWER.sector) return 'close';
+  return 'miss';
+}
+
+function classLabel(cls){
+  return cls === 'hit' ? 'MATCH' : cls === 'close' ? 'SECTOR MATCH' : 'NO MATCH';
+}
+
+function addLedgerRow(match, index, ledgerEntries){
+  const cls = classifyGuess(match);
+  const row = document.createElement('div');
+  row.className = 'guess-entry';
+  row.innerHTML = `<span class="g-num">${index}</span><span class="g-ticker">${match.t}</span><span class="g-result ${cls}">${classLabel(cls)}</span>`;
+  ledgerEntries.prepend(row);
+}
+
+function wireGuessFlow(){
+  const input = document.getElementById('ticker-input');
+  const btn = document.getElementById('guess-btn');
+  const autocomplete = document.getElementById('autocomplete');
+  const ledger = document.getElementById('ledger');
+  const ledgerEntries = document.getElementById('ledger-entries');
+
+  input.addEventListener('input', () => {
+    const matches = matchTickers(input.value);
+    if (matches.length === 0 || gameOver){
+      autocomplete.style.display = 'none';
+      return;
+    }
+    autocomplete.innerHTML = matches.map(m =>
+      `<div data-ticker="${m.t}"><strong>${m.t}</strong> — ${m.name}</div>`
+    ).join('');
+    autocomplete.style.display = 'block';
+  });
+
+  autocomplete.addEventListener('click', (e) => {
+    const row = e.target.closest('div[data-ticker]');
+    if (row){
+      input.value = row.getAttribute('data-ticker');
+      autocomplete.style.display = 'none';
+      input.focus();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.guess-row')) autocomplete.style.display = 'none';
+  });
+
+  function submitGuess(){
+    if (gameOver) return;
+    const match = resolveGuess(input.value);
+    if (!match){
+      input.style.borderColor = '#a8642f';
+      setTimeout(() => input.style.borderColor = '', 500);
+      return;
+    }
+    if (guesses.some(g => g.t === match.t)) { input.value=''; return; }
+
+    guesses.push(match);
+    input.value = '';
+    autocomplete.style.display = 'none';
+
+    ledger.style.display = 'block';
+    addLedgerRow(match, guesses.length, ledgerEntries);
+
+    renderClues(guesses.length);
+
+    if (match.t === ANSWER.t){
+      finalizeUI(true);
+      persistResult(true);
+    } else if (guesses.length >= MAX_GUESSES){
+      finalizeUI(false);
+      persistResult(false);
+    }
+  }
+
+  btn.addEventListener('click', submitGuess);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitGuess(); });
+}
+
+function finalizeUI(won){
+  gameOver = true;
+  document.getElementById('guess-btn').disabled = true;
+  document.getElementById('ticker-input').disabled = true;
+  const panel = document.getElementById('end-panel');
+  panel.classList.add('show');
+  document.getElementById('verdict').textContent = won ? 'Called it.' : 'Better luck tomorrow.';
+  document.getElementById('verdict-detail').textContent =
+    `The answer was ${ANSWER.t} — ${ANSWER.name} (${ANSWER.sector})`;
+  const tapeSquares = guesses.map(g => g.t === ANSWER.t ? '\ud83d\udfe9' : (g.sector === ANSWER.sector ? '\ud83d\udfe8' : '\u2b1b')).join('');
+  document.getElementById('tape').textContent = `Chartle ${guesses.length}/${MAX_GUESSES}  ${tapeSquares}`;
+}
+
+init();
+</script>
+</body>
+</html>
