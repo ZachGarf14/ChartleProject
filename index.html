@@ -756,15 +756,23 @@ function wireFeedbackModal(){
   });
 }
 
+// Data files (tickers.json and the daily <date>.json puzzles) are served
+// from jsDelivr's public GitHub CDN rather than same-origin, so a daily
+// data commit never requires a Netlify deploy — see netlify.toml's
+// `ignore` build command and the README for the full explanation. This
+// only works because the repo is PUBLIC; jsDelivr can't mirror private
+// repos. If the repo path or branch ever changes, update DATA_CDN_BASE.
+const DATA_CDN_BASE = 'https://cdn.jsdelivr.net/gh/ZachGarf14/ChartleProject@main/data';
+
 async function loadTickers(){
-  const res = await fetch('data/tickers.json');
+  const res = await fetch(`${DATA_CDN_BASE}/tickers.json`);
   if (!res.ok) throw new Error('Failed to load tickers.json');
   return res.json();
 }
 
 async function loadDailyData(dateStr){
   try {
-    const res = await fetch(`data/${dateStr}.json`);
+    const res = await fetch(`${DATA_CDN_BASE}/${dateStr}.json`);
     if (!res.ok) return null;
     return await res.json();
   } catch (e) {
