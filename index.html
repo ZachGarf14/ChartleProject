@@ -551,12 +551,22 @@ function hashSeed(str){
   };
 }
 
-function todayStrUTC(){
-  const d = new Date();
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+function todayStrPuzzle(){
+  const now = new Date();
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  });
+  const parts = {};
+  fmt.formatToParts(now).forEach(p => { parts[p.type] = p.value; });
+  // Treat the ET wall-clock numbers as if they were UTC — safe here since
+  // we only do calendar-date arithmetic on them, never convert back to a
+  // real instant. Shifting back 3 hours moves the "day" boundary from
+  // midnight to 3:00 AM ET.
+  const etAsUTC = new Date(`${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}Z`);
+  const shifted = new Date(etAsUTC.getTime() - 3 * 3600 * 1000);
+  return shifted.toISOString().slice(0, 10);
 }
 
 // Synthetic fallback series generator — used only if the day's
@@ -763,7 +773,7 @@ async function loadDailyData(dateStr){
 }
 
 async function init(){
-  todayStr = todayStrUTC();
+  todayStr = todayStrPuzzle();
   TICKERS = await loadTickers();
 
   const rand = hashSeed(todayStr);
